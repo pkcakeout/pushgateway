@@ -190,6 +190,26 @@ func (dms *DiskMetricStore) loop(persistenceInterval time.Duration) {
 				}
 			}
 		}
+		
+		// Any storage releated event will trigger a cleanup cycle for this push gateway...
+		dms.cleanupStaleValues()
+	}
+}
+
+func (dms *DiskMetricStore) cleanupStaleValues() {
+	dms.lock.RLock()
+	defer dms.lock.RUnlock()
+
+	cleanupCycleStartTime := time.Now()
+
+	for _, group := range dms.metricGroups {
+		for name, tmf := range group.Metrics {
+			if tmf.StaleDuration >= 0 {
+				if tmf.Timestamp.Add(tmf.StaleDuration).Before(cleanupCycleStartTime) {
+					delete(group.Metrics, name)
+				}
+			}
+		}
 	}
 }
 
