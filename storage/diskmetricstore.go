@@ -190,9 +190,6 @@ func (dms *DiskMetricStore) loop(persistenceInterval time.Duration) {
 				}
 			}
 		}
-		
-		// Any storage releated event will trigger a cleanup cycle for this push gateway...
-		dms.cleanupStaleValues()
 	}
 }
 
@@ -246,6 +243,10 @@ func (dms *DiskMetricStore) processWriteRequest(wr DurationTaggedWriteRequest) {
 func (dms *DiskMetricStore) GetMetricFamiliesMap() GroupingKeyToMetricGroup {
 	dms.lock.RLock()
 	defer dms.lock.RUnlock()
+	
+	// When getting we will cleanup stale values first!
+	dms.cleanupStaleValues()
+
 	groupsCopy := make(GroupingKeyToMetricGroup, len(dms.metricGroups))
 	for k, g := range dms.metricGroups {
 		metricsCopy := make(NameToTimestampedMetricFamilyMap, len(g.Metrics))
@@ -258,6 +259,9 @@ func (dms *DiskMetricStore) GetMetricFamiliesMap() GroupingKeyToMetricGroup {
 }
 
 func (dms *DiskMetricStore) persist() error {
+	// Persisting will clean up stale values...
+	dms.cleanupStaleValues()
+
 	if dms.persistenceFile == "" {
 		return nil
 	}
