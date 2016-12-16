@@ -1,3 +1,6 @@
+## 2016-12-16
+* [FEATURE] Added configurable stale timers for metrics
+
 ## 0.3.1 / 2016-11-03
 * [BUGFIX] Fixed a race condition in the storage layer.
 * [ENHANCEMENT] Improved README.md.

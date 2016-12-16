@@ -11,6 +11,16 @@ exist long enough to be scraped, they can instead push their metrics
 to a Pushgateway. The Pushgateway then exposes these metrics to
 Prometheus.
 
+### Feature additions of this branch
+
+* [contributor: Paul K. Gerke](http://www.diagnijmegen.nl/index.php/Person?name=Paul_Konstantin_Gerke):
+    * Stale timers are needed in our case because we are not able to
+      control our network setup and we want to establish one-directional
+      traffic through a firewall. A push-gateway is very useful in this 
+      case. Even though sketched as an anti-pattern by the original this
+      is a required workaround in some cases. How to use them see below:
+
+
 ## Non-goals
 
 The Pushgateway is explicitly not an _aggregator or distributed counter_ but
@@ -103,6 +113,34 @@ Examples:
 * Delete all metrics grouped by job only:
 
         curl -X DELETE http://pushgateway.example.org:9091/metrics/job/some_job
+
+### Stale timers extension
+
+* Stale timers are attached to each metric and can be configured with a
+  "magic" setting (for backwards compatibility). If not used, stale lifetimes
+  default to "Forever". To set them explicitly include the new 
+  "#!set stale_timeout = [null|number]" setting
+  
+        cat <<EOF | curl --data-binary @- http://pushgateway.example.org:9091/metrics/job/some_job/instance/some_instance
+        # metric with lifetime = forever (default)
+        metric1{label="val1"} 42
+        
+        # All following metrics will have a lifetime of 10 seconds
+        #!set stale_timeout = 10
+        
+        # This metric will only be stored in the push gateway for 10 seconds
+        metric2{label="val2"} 1337
+        
+        # Reset stale timeout to forever (case sensitive!)
+        #!set stale_timeout = null
+        
+        # This metric will be available forever
+        metric3{label="val3"} 1234
+        EOF
+
+* Stale timeout information is added to the status-dashboard of the
+  pushgateway, so just visit http://your-host:9091/ to see if
+  the stale timers are configured correctly.
 
 ### About the job and instance labels
 

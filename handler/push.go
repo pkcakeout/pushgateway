@@ -116,7 +116,7 @@ func Push(
 				var staleTimeoutSplits []string
 				var timeoutMatchData [][]string
 				
-				timeoutSplits = regexp.MustCompile(`(^|\n)#!set stale_timeout\s*=\s*([0-9]+|null)[ \t]*`)
+				timeoutSplits = regexp.MustCompile(`(^|\n|\r)#!set stale_timeout\s*=\s*([0-9]+|null)[ \t]*`)
 				staleTimeoutSplits = timeoutSplits.Split(bodyString, -1)
 				timeoutMatchData = timeoutSplits.FindAllStringSubmatch(bodyString, -1)
 				
@@ -125,7 +125,7 @@ func Push(
 				
 				currentDuration = -1
 				for i := 0; i < len(staleTimeoutSplits); i++ {
-					byteReader := bytes.NewReader([]byte(staleTimeoutSplits[i]))
+					byteReader := bytes.NewReader([]byte(staleTimeoutSplits[i] + "\n"))
 					metricFamilies, err = parser.TextToMetricFamilies(byteReader)
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusInternalServerError)
