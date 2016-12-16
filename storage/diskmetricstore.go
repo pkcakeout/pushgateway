@@ -81,7 +81,7 @@ func NewDiskMetricStore(
 }
 
 // SubmitWriteRequest implements the MetricStore interface.
-func (dms *DiskMetricStore) SubmitWriteRequest(req WriteRequest) {
+func (dms *DiskMetricStore) SubmitWriteRequest(req WriteRequest, staleDuration time.Duration) {
 	dms.writeQueue <- req
 }
 

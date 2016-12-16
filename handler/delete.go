@@ -51,7 +51,7 @@ func Delete(ms storage.MetricStore) func(http.ResponseWriter, *http.Request, htt
 			ms.SubmitWriteRequest(storage.WriteRequest{
 				Labels:    labels,
 				Timestamp: time.Now(),
-			})
+			}, -1)
 			w.WriteHeader(http.StatusAccepted)
 		},
 	)
@@ -88,7 +88,7 @@ func LegacyDelete(ms storage.MetricStore) func(http.ResponseWriter, *http.Reques
 			ms.SubmitWriteRequest(storage.WriteRequest{
 				Labels:    labels,
 				Timestamp: time.Now(),
-			})
+			}, -1)
 			w.WriteHeader(http.StatusAccepted)
 		},
 	)

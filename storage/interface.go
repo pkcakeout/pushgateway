@@ -26,7 +26,10 @@ type MetricStore interface {
 	// SubmitWriteRequest submits a WriteRequest for processing. There is no
 	// guarantee when a request will be processed, but it is guaranteed that
 	// the requests are processed in the order of submission.
-	SubmitWriteRequest(req WriteRequest)
+	// staleDuration gives a timeout until which data is stored. If negative
+	// metrics are stored forever, if postive the data is deleted when
+	// older than that duraction
+	SubmitWriteRequest(req WriteRequest, staleDuration time.Duration)
 	// GetMetricFamilies returns all the currently saved MetricFamilies. The
 	// returned MetricFamilies are guaranteed to not be modified by the
 	// MetricStore anymore. However, they may still be read somewhere else,
@@ -75,8 +78,9 @@ type WriteRequest struct {
 
 // TimestampedMetricFamily adds the push timestamp to a MetricFamily-DTO.
 type TimestampedMetricFamily struct {
-	Timestamp    time.Time
-	MetricFamily *dto.MetricFamily
+	Timestamp      time.Time
+	StaleLifetime  time.Duration;
+	MetricFamily   *dto.MetricFamily
 }
 
 // GroupingKeyToMetricGroup is the first level of the metric store, keyed by

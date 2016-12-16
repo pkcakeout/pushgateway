@@ -15,12 +15,15 @@ package handler
 
 import (
 	"fmt"
+	"bytes"
 	"io"
 	"mime"
 	"net"
 	"net/http"
 	"sort"
+	"regexp"
 	"strings"
+	"strconv"
 	"sync"
 	"time"
 
@@ -69,7 +72,7 @@ func Push(
 				ms.SubmitWriteRequest(storage.WriteRequest{
 					Labels:    labels,
 					Timestamp: time.Now(),
-				})
+				}, -1)
 			}
 
 			var metricFamilies map[string]*dto.MetricFamily
@@ -88,23 +91,72 @@ func Push(
 					}
 					metricFamilies[mf.GetName()] = mf
 				}
+				
+				sanitizeLabels(metricFamilies, labels)
+				ms.SubmitWriteRequest(storage.WriteRequest{
+					Labels:         labels,
+					Timestamp:      time.Now(),
+					MetricFamilies: metricFamilies,
+				}, -1)
 			} else {
 				// We could do further content-type checks here, but the
 				// fallback for now will anyway be the text format
 				// version 0.0.4, so just go for it and see if it works.
+				
+				// suck in all the data and bundle it in a string
+				var bodyString string
+				{
+					buf := new(bytes.Buffer)
+					buf.ReadFrom(r.Body)
+					bodyString = buf.String()
+				}
+				
+				
+				var timeoutSplits *regexp.Regexp
+				var staleTimeoutSplits []string
+				var timeoutMatchData [][]string
+				
+				timeoutSplits = regexp.MustCompile(`(^|\n)#!set stale_timeout\s*=\s*([0-9]+|null)[ \t]*`)
+				staleTimeoutSplits = timeoutSplits.Split(bodyString, -1)
+				timeoutMatchData = timeoutSplits.FindAllStringSubmatch(bodyString, -1)
+				
+				var currentDuration time.Duration
 				var parser expfmt.TextParser
-				metricFamilies, err = parser.TextToMetricFamilies(r.Body)
+				
+				currentDuration = -1
+				for i := 0; i < len(staleTimeoutSplits); i++ {
+					byteReader := bytes.NewReader([]byte(staleTimeoutSplits[i]))
+					metricFamilies, err = parser.TextToMetricFamilies(byteReader)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					
+					sanitizeLabels(metricFamilies, labels)
+					
+					ms.SubmitWriteRequest(storage.WriteRequest{
+						Labels:         labels,
+						Timestamp:      time.Now(),
+						MetricFamilies: metricFamilies,
+					}, currentDuration)
+					
+					if (i < len(timeoutMatchData)) {
+						if (timeoutMatchData[i][2] == "null") {
+							currentDuration = -1
+						} else {
+							var ival int
+							ival, err = strconv.Atoi(timeoutMatchData[i][2])
+							if err != nil {
+								http.Error(w, err.Error(), http.StatusInternalServerError)
+								return
+							}
+							currentDuration = time.Duration(ival) * time.Second
+						}
+					}
+				}
+				
 			}
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			sanitizeLabels(metricFamilies, labels)
-			ms.SubmitWriteRequest(storage.WriteRequest{
-				Labels:         labels,
-				Timestamp:      time.Now(),
-				MetricFamilies: metricFamilies,
-			})
+			
 			w.WriteHeader(http.StatusAccepted)
 		},
 	)
@@ -153,7 +205,7 @@ func LegacyPush(
 				ms.SubmitWriteRequest(storage.WriteRequest{
 					Labels:    labels,
 					Timestamp: time.Now(),
-				})
+				}, -1)
 			}
 
 			var metricFamilies map[string]*dto.MetricFamily
@@ -188,7 +240,7 @@ func LegacyPush(
 				Labels:         labels,
 				Timestamp:      time.Now(),
 				MetricFamilies: metricFamilies,
-			})
+			}, -1)
 			w.WriteHeader(http.StatusAccepted)
 		},
 	)
