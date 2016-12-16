@@ -37,7 +37,7 @@ const (
 // disk.
 type DiskMetricStore struct {
 	lock            sync.RWMutex // Protects metricFamilies.
-	writeQueue      chan WriteRequest
+	writeQueue      chan DurationTaggedWriteRequest
 	drain           chan struct{}
 	done            chan error
 	metricGroups    GroupingKeyToMetricGroup
@@ -62,7 +62,7 @@ func NewDiskMetricStore(
 	persistenceInterval time.Duration,
 ) *DiskMetricStore {
 	dms := &DiskMetricStore{
-		writeQueue:      make(chan WriteRequest, writeQueueCapacity),
+		writeQueue:      make(chan DurationTaggedWriteRequest, writeQueueCapacity),
 		drain:           make(chan struct{}),
 		done:            make(chan error),
 		metricGroups:    GroupingKeyToMetricGroup{},
@@ -82,7 +82,10 @@ func NewDiskMetricStore(
 
 // SubmitWriteRequest implements the MetricStore interface.
 func (dms *DiskMetricStore) SubmitWriteRequest(req WriteRequest, staleDuration time.Duration) {
-	dms.writeQueue <- req
+	dms.writeQueue <- DurationTaggedWriteRequest {
+		Req: req,
+		StaleDuration: staleDuration,
+	}
 }
 
 // GetMetricFamilies implements the MetricStore interface.
@@ -190,30 +193,31 @@ func (dms *DiskMetricStore) loop(persistenceInterval time.Duration) {
 	}
 }
 
-func (dms *DiskMetricStore) processWriteRequest(wr WriteRequest) {
+func (dms *DiskMetricStore) processWriteRequest(wr DurationTaggedWriteRequest) {
 	dms.lock.Lock()
 	defer dms.lock.Unlock()
 
-	key := model.LabelsToSignature(wr.Labels)
+	key := model.LabelsToSignature(wr.Req.Labels)
 
-	if wr.MetricFamilies == nil {
+	if wr.Req.MetricFamilies == nil {
 		// Delete.
 		delete(dms.metricGroups, key)
 		return
 	}
 	// Update.
-	for name, mf := range wr.MetricFamilies {
+	for name, mf := range wr.Req.MetricFamilies {
 		group, ok := dms.metricGroups[key]
 		if !ok {
 			group = MetricGroup{
-				Labels:  wr.Labels,
+				Labels:  wr.Req.Labels,
 				Metrics: NameToTimestampedMetricFamilyMap{},
 			}
 			dms.metricGroups[key] = group
 		}
 		group.Metrics[name] = TimestampedMetricFamily{
-			Timestamp:    wr.Timestamp,
+			Timestamp:    wr.Req.Timestamp,
 			MetricFamily: mf,
+			StaleDuration: wr.StaleDuration,
 		}
 	}
 }

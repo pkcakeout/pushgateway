@@ -76,10 +76,16 @@ type WriteRequest struct {
 	MetricFamilies map[string]*dto.MetricFamily
 }
 
+// Adds duration information to the write request
+type DurationTaggedWriteRequest struct {
+	Req           WriteRequest
+	StaleDuration time.Duration
+}
+
 // TimestampedMetricFamily adds the push timestamp to a MetricFamily-DTO.
 type TimestampedMetricFamily struct {
 	Timestamp      time.Time
-	StaleLifetime  time.Duration;
+	StaleDuration  time.Duration;
 	MetricFamily   *dto.MetricFamily
 }
 

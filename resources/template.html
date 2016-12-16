@@ -87,7 +87,8 @@ limitations under the License.
 		    {{$name}}
 		    <span class="badge">{{$tmf.MetricFamily.GetHelp}}</span>
 		    <span class="label label-success">{{$tmf.MetricFamily.GetType}}</span>
-		    last pushed: {{$tmf.Timestamp}}
+		    last pushed: {{$tmf.Timestamp}};
+		    stale lifetime: {{$tmf.StaleDuration}}
 		  </h4>
 		</div>
 		<div id="m-{{$mCount}}" class="panel-collapse collapse">
