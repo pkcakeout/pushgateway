@@ -82,8 +82,8 @@ func NewDiskMetricStore(
 
 // SubmitWriteRequest implements the MetricStore interface.
 func (dms *DiskMetricStore) SubmitWriteRequest(req WriteRequest, staleDuration time.Duration) {
-	dms.writeQueue <- DurationTaggedWriteRequest {
-		Req: req,
+	dms.writeQueue <- DurationTaggedWriteRequest{
+		Req:           req,
 		StaleDuration: staleDuration,
 	}
 }
@@ -232,8 +232,8 @@ func (dms *DiskMetricStore) processWriteRequest(wr DurationTaggedWriteRequest) {
 			dms.metricGroups[key] = group
 		}
 		group.Metrics[name] = TimestampedMetricFamily{
-			Timestamp:    wr.Req.Timestamp,
-			MetricFamily: mf,
+			Timestamp:     wr.Req.Timestamp,
+			MetricFamily:  mf,
 			StaleDuration: wr.StaleDuration,
 		}
 	}
@@ -243,7 +243,7 @@ func (dms *DiskMetricStore) processWriteRequest(wr DurationTaggedWriteRequest) {
 func (dms *DiskMetricStore) GetMetricFamiliesMap() GroupingKeyToMetricGroup {
 	dms.lock.RLock()
 	defer dms.lock.RUnlock()
-	
+
 	// When getting we will cleanup stale values first!
 	dms.cleanupStaleValues()
 

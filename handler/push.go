@@ -14,16 +14,16 @@
 package handler
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 	"io"
 	"mime"
 	"net"
 	"net/http"
-	"sort"
 	"regexp"
-	"strings"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -91,7 +91,7 @@ func Push(
 					}
 					metricFamilies[mf.GetName()] = mf
 				}
-				
+
 				sanitizeLabels(metricFamilies, labels)
 				ms.SubmitWriteRequest(storage.WriteRequest{
 					Labels:         labels,
@@ -102,7 +102,7 @@ func Push(
 				// We could do further content-type checks here, but the
 				// fallback for now will anyway be the text format
 				// version 0.0.4, so just go for it and see if it works.
-				
+
 				// suck in all the data and bundle it in a string
 				var bodyString string
 				{
@@ -110,19 +110,18 @@ func Push(
 					buf.ReadFrom(r.Body)
 					bodyString = buf.String()
 				}
-				
-				
+
 				var timeoutSplits *regexp.Regexp
 				var staleTimeoutSplits []string
 				var timeoutMatchData [][]string
-				
+
 				timeoutSplits = regexp.MustCompile(`(^|\n|\r)#!set stale_timeout\s*=\s*([0-9]+|null)[ \t]*`)
 				staleTimeoutSplits = timeoutSplits.Split(bodyString, -1)
 				timeoutMatchData = timeoutSplits.FindAllStringSubmatch(bodyString, -1)
-				
+
 				var currentDuration time.Duration
 				var parser expfmt.TextParser
-				
+
 				currentDuration = -1
 				for i := 0; i < len(staleTimeoutSplits); i++ {
 					byteReader := bytes.NewReader([]byte(staleTimeoutSplits[i] + "\n"))
@@ -131,17 +130,17 @@ func Push(
 						http.Error(w, err.Error(), http.StatusInternalServerError)
 						return
 					}
-					
+
 					sanitizeLabels(metricFamilies, labels)
-					
+
 					ms.SubmitWriteRequest(storage.WriteRequest{
 						Labels:         labels,
 						Timestamp:      time.Now(),
 						MetricFamilies: metricFamilies,
 					}, currentDuration)
-					
-					if (i < len(timeoutMatchData)) {
-						if (timeoutMatchData[i][2] == "null") {
+
+					if i < len(timeoutMatchData) {
+						if timeoutMatchData[i][2] == "null" {
 							currentDuration = -1
 						} else {
 							var ival int
@@ -154,9 +153,9 @@ func Push(
 						}
 					}
 				}
-				
+
 			}
-			
+
 			w.WriteHeader(http.StatusAccepted)
 		},
 	)

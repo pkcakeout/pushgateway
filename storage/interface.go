@@ -84,9 +84,9 @@ type DurationTaggedWriteRequest struct {
 
 // TimestampedMetricFamily adds the push timestamp to a MetricFamily-DTO.
 type TimestampedMetricFamily struct {
-	Timestamp      time.Time
-	StaleDuration  time.Duration;
-	MetricFamily   *dto.MetricFamily
+	Timestamp     time.Time
+	StaleDuration time.Duration
+	MetricFamily  *dto.MetricFamily
 }
 
 // GroupingKeyToMetricGroup is the first level of the metric store, keyed by
