@@ -345,7 +345,7 @@ There now is a special docker for this extension at docker hub:
 For example:
 
 ```bash
-docker pull mrapplejuice/pushgateway
+docker pull mrapplejuice/pushgateway:0.3.1
 
 docker run -d -p 9091:9091 mrapplejuice/pushgateway:0.3.1
 ```
