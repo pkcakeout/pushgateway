@@ -6,14 +6,15 @@ exist long enough to be scraped, they can instead push their metrics
 to a Pushgateway. The Pushgateway then exposes these metrics to
 Prometheus.
 
-### Feature additions of this branch
+### Feature extension on this branch
 
 * [contributor: Paul K. Gerke](http://www.diagnijmegen.nl/index.php/Person?name=Paul_Konstantin_Gerke):
-    * Stale timers are needed in our case because we are not able to
-      control our network setup and we want to establish one-directional
-      traffic through a firewall. A push-gateway is very useful in this 
-      case. Even though sketched as an anti-pattern by the original this
-      is a required workaround in some cases. How to use them see below:
+    * Stale timers are needed in our case because we need to push metrics 
+      through a firewall in a strictly one-directional way. A push-gateway is 
+      very useful in this case. Even though sketched as an anti-pattern by the 
+      original developers this is a required workaround in this use case. 
+      See the section [Stale timers extension](#stale-timers-extension) for 
+      details on how to use the extension.
 
 
 ## Non-goals
@@ -111,10 +112,10 @@ Examples:
 
 ### Stale timers extension
 
-* Stale timers are attached to each metric and can be configured with a
-  "magic" setting (for backwards compatibility). If not used, stale lifetimes
-  default to "Forever". To set them explicitly include the new 
-  "#!set stale_timeout = [null|number]" setting
+* Stale timers are attached to each metric and can be configured with the
+  "magic" setting `#!set stale_timeout [value|number]`. If not used, stale 
+  timeouts default to "Forever" (value=`null`) which is the default behavior
+  of a normal pushgateway:
   
         cat <<EOF | curl --data-binary @- http://pushgateway.example.org:9091/metrics/job/some_job/instance/some_instance
         # metric with lifetime = forever (default)
@@ -136,6 +137,11 @@ Examples:
 * Stale timeout information is added to the status-dashboard of the
   pushgateway, so just visit http://your-host:9091/ to see if
   the stale timers are configured correctly.
+
+* Note that the timeouts are not applied directly, but are commited whenever the
+  `persistence.interval` expires. Whenever data is written to disk, the timers
+  are checked for expiration and are deleted on write. The minimal possible
+  stale timeout therefore is given by the setting `persistence.interval`.
 
 ### About the job and instance labels
 
@@ -332,15 +338,20 @@ Environments](http://peter.bourgon.org/go-in-production/#formatting-and-style).
 
 ## Using Docker
 
-You can deploy the Pushgateway using the [prom/pushgateway](https://registry.hub.docker.com/u/prom/pushgateway/) Docker image.
+There now is a special docker for this extension at docker hub:
+[mrapplejuice/pushgateway](https://hub.docker.com/r/mrapplejuice/pushgateway/).
+                           
 
 For example:
 
 ```bash
-docker pull prom/pushgateway
+docker pull mrapplejuice/pushgateway
 
-docker run -d -p 9091:9091 prom/pushgateway
+docker run -d -p 9091:9091 mrapplejuice/pushgateway:0.3.1
 ```
+
+The settings are the same as for the
+(original prometheus pushgatway docker image)[https://hub.docker.com/r/prom/pushgateway/].
 
 
 [travis]: https://travis-ci.org/prometheus/pushgateway
