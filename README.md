@@ -45,7 +45,8 @@ If you want to compile yourself from the sources, you need a working Go
 setup. Then use the provided Makefile (type `make`).
 
 For the most basic setup, just start the binary. To change the address
-to listen on, use the `-web.listen-address` flag. The `-persistence.file` flag
+to listen on, use the `-web.listen-address` flag. By default, Pushgateway 
+does not persist metrics. However, the `-persistence.file` flag
 allows you to specify a file in which the pushed metrics will be
 persisted (so that they survive restarts of the Pushgateway).
 
@@ -165,7 +166,7 @@ desired behavior. See the
 for details.
 
 This leaves us with the case where the metrics pushed to the Pushgateway do not
-feature an `instance` label. This case is quite commen as the pushed metrics
+feature an `instance` label. This case is quite common as the pushed metrics
 are often on a service level and therefore not related to a particular
 instance. Even with `honor_labels: true`, the Prometheus server will attach an
 `instance` label if no `instance` label has been set in the first
