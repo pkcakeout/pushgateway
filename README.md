@@ -143,6 +143,13 @@ Examples:
   `persistence.interval` expires. Whenever data is written to disk, the timers
   are checked for expiration and are deleted on write. The minimal possible
   stale timeout therefore is given by the setting `persistence.interval`.
+  
+* Metrics will not automatically disappear on the scraping prometheus server 
+  after they expire. After the time of expiry, they will only be removed from
+  the pushgateway. The final removal of the metric on prometheus will occur 
+  after a time period configured by the prometheus option `query.staleness-delta`
+  (default: 5m). So if a metric is said to be stale after 5 mintues on the
+  pushgateway, by default, it will be removed after 10 minutes on prometheus.
 
 ### About the job and instance labels
 
