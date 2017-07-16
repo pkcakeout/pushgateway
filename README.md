@@ -93,8 +93,6 @@ Examples:
         cat <<EOF | curl --data-binary @- http://pushgateway.example.org:9091/metrics/job/some_job/instance/some_instance
         # TYPE some_metric counter
         some_metric{label="val1"} 42
-        # This one even has a timestamp (but beware, see below).
-        some_metric{label="val2"} 34 1398355504000
         # TYPE another_metric gauge
         # HELP another_metric Just an example.
         another_metric 2398.283
@@ -195,7 +193,7 @@ time. A metric that cannot be scraped has basically ceased to
 exist. Prometheus is somewhat tolerant, but if it cannot get any
 samples for a metric in 5min, it will behave as if that metric does
 not exist anymore. Preventing that is actually one of the reasons to
-use a push gateway. The push gateway will make the metrics of your
+use a Pushgateway. The Pushgateway will make the metrics of your
 ephemeral job scrapable at any time. Attaching the time of pushing as
 a timestamp would defeat that purpose because 5min after the last
 push, your metric will look as stale to Prometheus as if it could not
@@ -203,11 +201,17 @@ be scraped at all anymore. (Prometheus knows only one timestamp per
 sample, there is no way to distinguish a 'time of pushing' and a 'time
 of scraping'.)
 
-You can still force Prometheus to attach a different timestamp by
-using the optional timestamp field in the exchange format. However,
-there are very few use cases where that would make
-sense. (Essentially, if you push more often than every 5min, you
-could attach the time of pushing as a timestamp.)
+As there are essentially no use cases where it would make sense to to attach a
+different timestamp, and many users attempting to incorrectly do so (despite no
+client library supporting this) any pushes with timestamps will be rejected.
+
+If you think you need to push a timestamp, please see [When To Use The
+Pushgateway](https://prometheus.io/docs/practices/pushing/).
+
+In order to make it easier to alert on pushers that have not run recently, the
+Pushgateway will add in a metric `push_time_seconds` with the Unix timestamp
+of the last `POST`/`PUT` to each group. This will override any pushed metric by
+that name.
 
 ## API
 

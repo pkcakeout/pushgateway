@@ -32,11 +32,17 @@ import (
 	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/model"
 
 	dto "github.com/prometheus/client_model/go"
 
 	"github.com/prometheus/pushgateway/storage"
+)
+
+const (
+	pushMetricName = "push_time_seconds"
+	pushMetricHelp = "Last Unix time when this group was changed in the Pushgateway."
 )
 
 // Push returns an http.Handler which accepts samples over HTTP and stores them
@@ -60,10 +66,12 @@ func Push(
 			labels, err := splitLabels(labelsString)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
+				log.Debugf("Failed to parse URL: %v, %v", labelsString, err.Error())
 				return
 			}
 			if job == "" {
 				http.Error(w, "job name is required", http.StatusBadRequest)
+				log.Debug("job name is reuqired")
 				return
 			}
 			labels["job"] = job
@@ -127,9 +135,18 @@ func Push(
 					byteReader := bytes.NewReader([]byte(staleTimeoutSplits[i] + "\n"))
 					metricFamilies, err = parser.TextToMetricFamilies(byteReader)
 					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						log.Debugf("Failed to parse text, %v", err.Error())
 						return
 					}
+					if timestampsPresent(metricFamilies) {
+						http.Error(w, "pushed metrics must not have timestamps", http.StatusBadRequest)
+						log.Debug("pushed metrics must not have timestamps")
+						return
+					}
+
+					now := time.Now()
+					addPushTimestamp(metricFamilies, now)
 
 					sanitizeLabels(metricFamilies, labels)
 
@@ -155,7 +172,6 @@ func Push(
 				}
 
 			}
-
 			w.WriteHeader(http.StatusAccepted)
 		},
 	)
@@ -190,6 +206,7 @@ func LegacyPush(
 			var err error
 			if job == "" {
 				http.Error(w, "job name is required", http.StatusBadRequest)
+				log.Debug("job name is required")
 				return
 			}
 			if instance == "" {
@@ -232,12 +249,20 @@ func LegacyPush(
 			}
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				log.Debugf("Error parsing request body, %v", err.Error())
 				return
 			}
+			if timestampsPresent(metricFamilies) {
+				http.Error(w, "pushed metrics must not have timestamps", http.StatusBadRequest)
+				log.Debug("pushed metrics must not have timestamps")
+				return
+			}
+			now := time.Now()
+			addPushTimestamp(metricFamilies, now)
 			sanitizeLabels(metricFamilies, labels)
 			ms.SubmitWriteRequest(storage.WriteRequest{
 				Labels:         labels,
-				Timestamp:      time.Now(),
+				Timestamp:      now,
 				MetricFamilies: metricFamilies,
 			}, -1)
 			w.WriteHeader(http.StatusAccepted)
@@ -325,4 +350,32 @@ func splitLabels(labels string) (map[string]string, error) {
 		result[components[i]] = components[i+1]
 	}
 	return result, nil
+}
+
+// Checks if any timestamps have been specified.
+func timestampsPresent(metricFamilies map[string]*dto.MetricFamily) bool {
+	for _, mf := range metricFamilies {
+		for _, m := range mf.GetMetric() {
+			if m.TimestampMs != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// Add metric to indicate the push time.
+func addPushTimestamp(metricFamilies map[string]*dto.MetricFamily, t time.Time) {
+	metricFamilies[pushMetricName] = &dto.MetricFamily{
+		Name: proto.String(pushMetricName),
+		Help: proto.String(pushMetricHelp),
+		Type: dto.MetricType_GAUGE.Enum(),
+		Metric: []*dto.Metric{
+			{
+				Gauge: &dto.Gauge{
+					Value: proto.Float64(float64(t.UnixNano()) / 1e9),
+				},
+			},
+		},
+	}
 }
