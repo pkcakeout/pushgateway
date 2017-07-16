@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/julienschmidt/httprouter"
@@ -31,7 +32,7 @@ type MockMetricStore struct {
 	lastWriteRequest storage.WriteRequest
 }
 
-func (m *MockMetricStore) SubmitWriteRequest(req storage.WriteRequest) {
+func (m *MockMetricStore) SubmitWriteRequest(req storage.WriteRequest, t time.Duration) {
 	m.lastWriteRequest = req
 }
 
