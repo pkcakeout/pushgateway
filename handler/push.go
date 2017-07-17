@@ -130,6 +130,10 @@ func Push(
 				var currentDuration time.Duration
 				var parser expfmt.TextParser
 
+				preparedWriteRequests := make([]storage.WriteRequest, len(staleTimeoutSplits))
+				preparedWriteRequestDurations := make([]time.Duration, len(staleTimeoutSplits))
+
+				first := true
 				currentDuration = -1
 				for i := 0; i < len(staleTimeoutSplits); i++ {
 					byteReader := bytes.NewReader([]byte(staleTimeoutSplits[i] + "\n"))
@@ -146,15 +150,20 @@ func Push(
 					}
 
 					now := time.Now()
-					addPushTimestamp(metricFamilies, now)
+					if first {
+						// The new time metric will always be part of the first - INFINITE - chunk
+						addPushTimestamp(metricFamilies, now)
+						first = false
+					}
 
 					sanitizeLabels(metricFamilies, labels)
 
-					ms.SubmitWriteRequest(storage.WriteRequest{
+					preparedWriteRequests[i] = storage.WriteRequest{
 						Labels:         labels,
 						Timestamp:      time.Now(),
 						MetricFamilies: metricFamilies,
-					}, currentDuration)
+					}
+					preparedWriteRequestDurations[i] = currentDuration
 
 					if i < len(timeoutMatchData) {
 						if timeoutMatchData[i][2] == "null" {
@@ -169,6 +178,10 @@ func Push(
 							currentDuration = time.Duration(ival) * time.Second
 						}
 					}
+				}
+				
+				for i := 0; i < len(preparedWriteRequests); i++ {
+					ms.SubmitWriteRequest(preparedWriteRequests[i], preparedWriteRequestDurations[i])
 				}
 
 			}
