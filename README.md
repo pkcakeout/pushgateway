@@ -20,9 +20,10 @@ Prometheus.
 ## Non-goals
 
 The Pushgateway is explicitly not an _aggregator or distributed counter_ but
-rather a metrics cache. It does not have a statsd-like semantics. The metrics
-pushed are exactly the same as you would present for scraping in a permanently
-running program.
+rather a metrics cache. It does not have
+[statsd](https://github.com/etsy/statsd)-like semantics. The metrics pushed are
+exactly the same as you would present for scraping in a permanently running
+program.
 
 For machine-level metrics, the
 [textfile](https://github.com/prometheus/node_exporter/blob/master/README.md#textfile-collector)
@@ -45,10 +46,22 @@ If you want to compile yourself from the sources, you need a working Go
 setup. Then use the provided Makefile (type `make`).
 
 For the most basic setup, just start the binary. To change the address
-to listen on, use the `-web.listen-address` flag. By default, Pushgateway 
-does not persist metrics. However, the `-persistence.file` flag
+to listen on, use the `--web.listen-address` flag (e.g. "0.0.0.0:9091" or ":9091").
+By default, Pushgateway does not persist metrics. However, the `--persistence.file` flag
 allows you to specify a file in which the pushed metrics will be
 persisted (so that they survive restarts of the Pushgateway).
+
+### Using Docker
+
+You can deploy the Pushgateway using the [mrapplejuice/pushgateway](https://hub.docker.com/r/mrapplejuice/pushgateway/) Docker image.
+
+For example:
+
+```bash
+docker pull prom/pushgateway
+
+docker run -d -p 9091:9091 prom/pushgateway
+```
 
 ## Use it
 
@@ -296,11 +309,19 @@ processed. Neither is there a guarantee that the pushed metrics are
 persisted to disk. (A server crash may cause data loss. Or the push
 gateway is configured to not persist to disk at all.)
 
+A `PUT` request with an empty body effectively deletes all metrics with the
+specified grouping key. However, in contrast to the
+[`DELETE` request](#delete-method) described below, it does update the
+`push_time_seconds` metrics.
+
 ### `POST` method
 
 `POST` works exactly like the `PUT` method but only metrics with the
 same name as the newly pushed metrics are replaced (among those with
 the same grouping key).
+
+A `POST` request with an empty body merely updates the `push_time_seconds`
+metrics but does not change any of the previously pushed metrics.
 
 ### `DELETE` method
 
@@ -366,7 +387,3 @@ The settings are the same as for the
 (original prometheus pushgatway docker image)[https://hub.docker.com/r/prom/pushgateway/].
 
 
-[travis]: https://travis-ci.org/prometheus/pushgateway
-[hub]: https://hub.docker.com/r/prom/pushgateway/
-[circleci]: https://circleci.com/gh/prometheus/pushgateway
-[quay]: https://quay.io/repository/prometheus/pushgateway
