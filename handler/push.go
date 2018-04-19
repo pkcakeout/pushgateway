@@ -179,7 +179,7 @@ func Push(
 						}
 					}
 				}
-				
+
 				for i := 0; i < len(preparedWriteRequests); i++ {
 					ms.SubmitWriteRequest(preparedWriteRequests[i], preparedWriteRequestDurations[i])
 				}

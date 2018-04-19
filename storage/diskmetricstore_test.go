@@ -379,7 +379,7 @@ func TestAddDeletePersistRestore(t *testing.T) {
 		},
 		Timestamp:      ts1,
 		MetricFamilies: map[string]*dto.MetricFamily{"mf3": mf3},
-	}, time.Duration(1000000) * time.Second)
+	}, time.Duration(1000000)*time.Second)
 	time.Sleep(20 * time.Millisecond) // Give loop() time to process.
 	if err := checkMetricFamilies(dms, mf3); err != nil {
 		t.Error(err)
@@ -394,7 +394,7 @@ func TestAddDeletePersistRestore(t *testing.T) {
 		},
 		Timestamp:      ts2,
 		MetricFamilies: map[string]*dto.MetricFamily{"mf1": mf1b, "mf2": mf2},
-	}, time.Duration(1000000) * time.Second)
+	}, time.Duration(1000000)*time.Second)
 	time.Sleep(20 * time.Millisecond) // Give loop() time to process.
 	if err := checkMetricFamilies(dms, mf1b, mf2, mf3); err != nil {
 		t.Error(err)
@@ -410,7 +410,7 @@ func TestAddDeletePersistRestore(t *testing.T) {
 		},
 		Timestamp:      ts3,
 		MetricFamilies: map[string]*dto.MetricFamily{"mf1": mf1a},
-	}, time.Duration(1000000) * time.Second)
+	}, time.Duration(1000000)*time.Second)
 	time.Sleep(20 * time.Millisecond) // Give loop() time to process.
 	if err := checkMetricFamilies(dms, mf1a, mf2, mf3); err != nil {
 		t.Error(err)
